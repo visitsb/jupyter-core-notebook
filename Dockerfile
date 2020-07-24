@@ -124,10 +124,12 @@ RUN apt-get -y update && \
 WORKDIR /tmp
 
 # hadolint ignore=SC2046
-RUN wget -q https://archive.apache.org/dist/spark/spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz && \
+RUN wget -q $(wget -qO- https://www.apache.org/dyn/closer.lua/spark/spark-${APACHE_SPARK_VERSION}/spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz\?as_json | \
+    python -c "import sys, json; content=json.load(sys.stdin); print(content['preferred']+content['path_info'])") && \
+    echo "BFE45406C67CC4AE00411AD18CC438F51E7D4B6F14EB61E7BF6B5450897C2E8D3AB020152657C0239F253735C263512FFABF538AC5B9FFFA38B8295736A9C387 *spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" | sha512sum -c - && \
     tar xzf "spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" -C /usr/local --owner root --group root --no-same-owner && \
     rm "spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz"
-
+   
 WORKDIR /usr/local
 RUN ln -s "spark-${APACHE_SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}" spark
 
@@ -184,17 +186,3 @@ RUN conda install --quiet --yes 'spylon-kernel=0.4*' && \
     rm -rf "/home/${NB_USER}/.local" && \
     fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
-
-##### VISITSB/JUPYTER-OCTAVE #####
-# https://raw.githubusercontent.com/visitsb/jupyter-octave/master/Dockerfile
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-
-USER root
-
-RUN apt-get -y update && \
-    apt-get -y install octave octave-doc octave-info octave-htmldoc && \
-    apt-get -y install octave-control octave-image octave-io octave-optim octave-signal octave-statistics && \
-    pip install octave_kernel && \
-    apt-get -y clean && apt-get -y autoclean
-
-USER $NB_UID
